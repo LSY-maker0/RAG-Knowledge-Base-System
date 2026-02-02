@@ -164,8 +164,7 @@ class HybridRetriever:
         self.bm25_retriever = BM25Retriever(metadata_path)
         self.reranker=LLMReranker()
 
-    @staticmethod
-    def _merge_hybrid_results(vector_results, bm25_results, x=0.6):
+    def _merge_hybrid_results(self,vector_results, bm25_results, x=0.6):
         """
         融合向量检索和BM25检索的结果
         :param vector_results: 向量检索的结果
