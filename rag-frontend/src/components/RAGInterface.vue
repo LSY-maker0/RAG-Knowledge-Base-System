@@ -3,7 +3,7 @@
     <!-- 左侧输入面板 -->
     <div class="input-panel">
       <div class="header">
-        <h1>🔍 RAG知识库系统</h1>
+        <h1>📚 RAG知识库系统</h1>
         <p>智能问答与思考过程可视化</p>
       </div>
 
@@ -39,8 +39,10 @@
         <h2 class="process-title">
           思考过程可视化
           <span v-if="currentQuestion" class="question-preview"> - "{{ truncateText(currentQuestion, 30)
-          }}"</span>
+            }}"</span>
         </h2>
+
+        <!-- <div>{{ processSteps }}</div> -->
 
         <div class="process-steps">
           <!-- 步骤列表 -->
@@ -50,7 +52,6 @@
             <div v-if="step.type === 'input'" class="step-content input-info">
               <div class="step-header">
                 <div class="step-title">📥 接收问题</div>
-                <div class="step-time">{{ step.time || '' }}</div>
               </div>
               <div class="step-desc">{{ step.data || '' }}</div>
             </div>
@@ -62,7 +63,9 @@
                 <div class="step-time">{{ step.time || '' }}</div>
               </div>
               <div class="step-desc">
-                <div v-for="(line, idx) in step.data" :key="idx">{{ line }}</div>
+                <div v-for="(line, idx) in step.description" :key="idx">{{ line }}<span class="result_button"
+                    @click="handleViewChunks(index, 'retrieval', idx)">检索结果</span>
+                </div>
               </div>
             </div>
 
@@ -73,56 +76,81 @@
                 <div class="step-time">{{ step.time || '' }}</div>
               </div>
               <div class="step-desc">
-                <!-- <div v-for="(item, idx) in step.data" :key="idx">重排项目 {{ item }}</div> -->
+                {{ step.description }} <span class="result_button"
+                  @click="handleViewChunks(index, 'rerank', 0)">检索结果</span>
               </div>
+
             </div>
 
-            <!-- 4. 参考文档 -->
-            <div v-if="step.type === 'rerank'" class="step-content documents-info">
-              <div class="step-header">
-                <div class="step-title">📄 参考文档</div>
-              </div>
-              <div class="step-desc">
-                <div v-for="(doc, docIdx) in step.data" :key="docIdx" class="document-item">
-                  <div class="doc-header">
-                    <div class="doc-source">📂 {{ doc.file_origin }} <span class="page-source">
-                        📄: P{{ doc.page_range ? (doc.page_range.length > 1
-                          ? doc.page_range[0] + '-' + doc.page_range[1] : doc.page_range[0]) : 'N/A' }}
-                      </span></div>
-                    <div class="doc-relevance">相关度: {{ (doc.relevance_score * 100).toFixed(0) }}%
-                    </div>
-                  </div>
-                  <div class="doc-content">{{ truncateText(doc.text, 100) }}</div>
-                  <div class="doc-details">
-                    <div class="detail-item">
-                      <span class="detail-label">向量分数（{{ doc?.vector_score?.toFixed(3) || 0 }}）</span>
-                      <span class="detail-label">BM25分数（{{ doc?.bm25_score?.toFixed(3) || 0 }}）</span>
-                      <span class="detail-label">融合分数（{{ doc?.final_score?.toFixed(3) || 0 }}）</span>
-                    </div>
-                    <div class="detail-item">
-                      <span class="detail-label">相似度原因:</span>
-                      <span class="detail-value">{{ doc.reasoning }}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
 
           <!-- 最终答案显示 -->
           <div v-if="finalAnswer" class="answer-info">
             <div class="step-header">
               <div class="step-title">💡 最终答案</div>
+              <div class="step-time">{{ totalTime || '' }}</div>
             </div>
-            <div class="step-desc">{{ finalAnswer }}</div>
+            <div class="step-desc markdown-body" v-html="renderedMarkdown"></div>
+          </div>
+          <div v-if="isLoadingProcess" class="loading-footer">
+            <div class="loading-circle">
+              <div class="loading-spinner"></div>
+            </div>
+            <span class="loading-text">{{ processText }}</span>
           </div>
         </div>
       </div>
     </div>
   </div>
+  <el-drawer v-model="drawer" :direction="'ltr'" :size="'40%'" title="I am the title" :with-header="false">
+    <div class="step-content documents-info">
+      <div class="step-header">
+        <div class="step-title">{{ currentChunkTitle }}</div>
+      </div>
+      <div class="step-desc">
+        <div v-for="(doc, docIdx) in referenceDocuments" :key="docIdx" class="document-item">
+          <div class="doc-header">
+            <div class="doc-source">📂 {{ doc.file_origin }} </div>
+            <div class="doc-relevance" v-if="doc.relevance_score">相关度: {{ (doc.relevance_score * 100).toFixed(0) }}%
+            </div>
+          </div>
+          <span class="page-source">
+            📄: P{{ doc.page_range ? (doc.page_range.length > 1
+              ? doc.page_range[0] + '-' + doc.page_range[1] : doc.page_range[0]) :
+              'N/A' }}
+          </span>
+          <div class="doc-content">{{ truncateText(doc.text, 100) }}</div>
+          <div class="doc-details">
+            <div class="detail-item">
+              <span class="detail-label" v-if="doc?.vector_score">向量分数（{{ doc?.vector_score?.toFixed(3) || 0
+                }}）</span>
+              <span class="detail-label" v-if="doc?.bm25_score || doc.relevance_score">BM25分数（{{
+                doc?.bm25_score?.toFixed(3) || 0
+                }}）</span>
+              <span class="detail-label" v-if="doc?.final_score">融合分数（{{ doc?.final_score?.toFixed(3) || 0
+                }}）</span>
+            </div>
+            <div class="detail-item" v-if="doc.reasoning">
+              <span class="detail-label">相似度原因:</span>
+              <span class="detail-value">{{ doc.reasoning }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </el-drawer>
 </template>
 
 <script>
+import MarkdownIt from 'markdown-it';
+import { ElMessage } from 'element-plus';
+
+const md = new MarkdownIt({
+  html: true,        // 允许 HTML 标签
+  linkify: true,     // 自动转换 URL
+  typographer: true  // 优化排版
+});
+
 export default {
   data() {
     return {
@@ -133,13 +161,47 @@ export default {
       finalAnswer: '',
       isLoading: false,
       statusMsg: '',
-      statusType: 'info'
+      statusType: 'info',
+      drawer: false,
+      isLoadingProcess: false,
+      processText: '',
+      totalTime: '',
     };
   },
   computed: {
     formattedAnswer() {
       if (!this.finalAnswer) return [];
       return this.finalAnswer.split('\n').filter(line => line.trim() !== '');
+    },
+    renderedMarkdown() {
+      return this.finalAnswer ? md.render(this.finalAnswer) : '';
+    },
+    currentChunkTitle() {
+      const docs = this.referenceDocuments;
+      const count = docs ? docs.length : 0;
+
+      // 安全检查：确保有数据且第一条数据存在
+      if (!docs || docs.length === 0 || !docs[0]) {
+        return '📄 参考文档';
+      }
+
+      const firstDoc = docs[0];
+
+      // 按优先级判断：LLM > 融合 > BM25 > 向量
+      if (firstDoc.relevance_score) {
+        return `🧠  LLM重排序块（数量: ${count}）`;
+      }
+      if (firstDoc.final_score) {
+        return `🔗  融合检索块（数量: ${count}）`;
+      }
+      if (firstDoc.bm25_score) {
+        return `🔍  BM25检索块（数量: ${count}）`;
+      }
+      if (firstDoc.vector_score) {
+        return `🎯  向量检索块（数量: ${count}）`;
+      }
+
+      return '📄  参考文档（数量: 20）';
     }
   },
   methods: {
@@ -163,6 +225,7 @@ export default {
       }
 
       this.isLoading = true;
+      this.isLoadingProcess = true;
       this.currentQuestion = this.questionInput;
       this.processSteps = [];
       this.referenceDocuments = [];
@@ -205,16 +268,31 @@ export default {
                     this.processSteps.push({
                       ...data.content
                     });
+                    this.processText = '混合检索文本块中...';
                     break;
                   case 'retrieval':
-                    this.processSteps.push({
-                      ...data.content
-                    });
+                    // 检查是否已存在 retrieval 类型的步骤
+                    const retrievalIndex = this.processSteps.findIndex(step => step.type === 'retrieval');
+                    if (retrievalIndex !== -1) {
+                      // 存在则更新
+                      this.processSteps[retrievalIndex] = {
+                        ...data.content
+                      };
+                    } else {
+                      // 不存在则新增
+                      this.processSteps.push({
+                        ...data.content
+                      });
+                    }
+                    if (this.processSteps[retrievalIndex].data.length === 3) {
+                      this.processText = 'LLM重排序中...';
+                    }
                     break;
                   case 'rerank':
                     this.processSteps.push({
                       ...data.content
                     });
+                    this.processText = '大模型生成回答中...';
                     break;
                   case 'documents':
                     this.processSteps.push({
@@ -227,6 +305,13 @@ export default {
                     break;
                   case 'done':
                     this.isLoading = false;
+                    this.isLoadingProcess = false;
+                    this.totalTime = data.timing;
+                    ElMessage({
+                      message: '分析完成',
+                      type: 'success',
+                      plain: true,
+                    });
                     this.showMsg('分析完成', 'success');
                     break;
                 }
@@ -241,6 +326,16 @@ export default {
         console.error('请求失败:', error);
         this.showMsg('后端连接失败', 'error');
         this.isLoading = false;
+      }
+    },
+
+    handleViewChunks(index, type, idx) {
+      if (type === 'rerank') {
+        this.referenceDocuments = this.processSteps[index].data;
+        this.drawer = true;
+      } else {
+        this.referenceDocuments = this.processSteps[index].data[idx];
+        this.drawer = true;
       }
     }
   }
@@ -486,7 +581,6 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
 }
 
 .doc-source {
@@ -496,7 +590,6 @@ export default {
 }
 
 .page-source {
-  margin-left: 10px;
   font-weight: 600;
   color: #333;
   font-size: 14px;
@@ -574,5 +667,70 @@ export default {
 
 .final-answer-content {
   margin: 10px 0;
+}
+
+.result_button {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: linear-gradient(135deg, #8bb2ff 0%, #7c7dc5 100%);
+  color: #eee;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  margin-left: 16px;
+}
+
+.result_button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(139, 139, 255, 0.2);
+  background: linear-gradient(135deg, #7a7aff 0%, #9a75ff 100%);
+}
+
+.loading-footer {
+  padding: 20px;
+  text-align: center;
+  background: #f9f9f9;
+  border-top: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-circle {
+  display: inline-block;
+  position: relative;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 10px;
+  margin-right: 18px;
+}
+
+.loading-spinner {
+  width: 100%;
+  height: 100%;
+  border: 3px solid rgba(139, 178, 255, 0.3);
+  border-top-color: #8bb2ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  font-size: 14px;
+  color: #666;
+  display: inline-block;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 </style>
