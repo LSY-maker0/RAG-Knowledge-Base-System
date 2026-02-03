@@ -23,7 +23,9 @@
 
 ## 🖥️ 效果展示
 
-<video controls src="RAG-问答系统-前端界面-视频演示1.mov" title="RAG系统演示视频"></video>
+<!-- <video controls src="RAG-问答系统-前端界面-视频演示1.mov" title="RAG系统演示视频"></video> -->
+
+<video controls src="RAG-前端视频.mp4" title="RAG系统演示视频"></video>
 
 ![界面演示1](RAG-问答系统-前端界面-图片演示1.png)
 ![界面演示2](RAG-问答系统-前端界面-图片演示2.png)
