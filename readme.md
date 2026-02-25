@@ -1,4 +1,4 @@
-# RAG知识库智能问答系统
+# RAG-Knowledge-Base-System
 
 <div align="center">
 <br>
@@ -8,6 +8,26 @@
 ## ✨ 项目简介
 
 本项目是一个基于RAG（检索增强生成） 构建的垂直领域知识库系统，专注于解决复杂 PDF 财报（含表格、跨页排版）的解析与精准问答问题，实现了从文档解析、知识入库、混合检索到流式响应的全流程闭环。
+
+核心亮点：
+*   🧠 **精准解析**：针对财报表格跨页问题，设计基于块结构的解析策略，有效保留数据完整性。
+*   ⚡  **极致体验**：基于 SSE 实现流式输出，前端实时渲染"思考"过程，告别长耗时等待。
+*   🎯 **混合检索**：结合 BM25 关键词检索与向量语义检索，显著提升专业术语的召回准确率。
+
+## 🖥️ 效果展示
+
+### 视频：
+https://github.com/user-attachments/assets/62c43f30-a94e-46ca-9ed1-b8a93e03e4bb
+
+### 图片：
+<div align="center">
+  <img width="80%" alt="文档解析过程" src="https://github.com/user-attachments/assets/c17a4cd7-8139-4299-bde3-c2d546056c32" />
+  
+  <br><br>
+  
+  <img width="45%" alt="检索出的块预览" src="https://github.com/user-attachments/assets/94f5c89d-96db-47f4-b69b-d33bd298b4eb" />
+  <img width="45%" alt="RAG问答结果" src="https://github.com/user-attachments/assets/d05478d4-be07-4098-b6c1-6fc4d1dceeb5" />
+</div>
 
 ## 🛠️ 技术栈
 
@@ -21,12 +41,4 @@
 | **中文处理**   | jieba分词                    |
 | **API框架**    | FastAPI                      |
 
-## 🖥️ 效果展示
 
-<!-- <video controls src="RAG-问答系统-前端界面-视频演示1.mov" title="RAG系统演示视频"></video> -->
-
-<video controls src="RAG-前端视频.mp4" title="RAG系统演示视频"></video>
-
-![界面演示1](RAG-问答系统-前端界面-图片演示1.png)
-![界面演示2](RAG-问答系统-前端界面-图片演示2.png)
-![界面演示3](RAG-问答系统-前端界面-图片演示3.png)
